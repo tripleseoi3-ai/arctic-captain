@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Arctic Captain - 바이브코딩 경진대회 작품 설명서</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 10mm 11mm;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Pretendard Variable", "Pretendard", "Malgun Gothic", sans-serif;
+      color: #102136;
+      font-size: 9.2pt;
+      line-height: 1.46;
+      background: #FFFFFF;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .page {
+      width: 100%;
+      min-height: 274mm;
+      max-height: 276mm;
+      overflow: hidden;
+      page-break-after: always;
+      display: flex;
+      flex-direction: column;
+      gap: 7.5pt;
+    }
+    .page:last-child {
+      page-break-after: auto;
+    }
+
+    /* Header Banner */
+    .doc-header {
+      background: linear-gradient(135deg, #08182E 0%, #153966 100%);
+      color: #FFFFFF;
+      border-radius: 9pt;
+      padding: 11pt 14pt;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10pt;
+    }
+    .doc-kicker {
+      font-size: 8pt;
+      color: #A8C9EE;
+      font-weight: 700;
+      margin: 0 0 2pt;
+    }
+    .doc-title {
+      font-size: 16pt;
+      font-weight: 900;
+      margin: 0;
+      letter-spacing: -0.02em;
+    }
+    .doc-sub {
+      font-size: 8.8pt;
+      color: #D9EBFF;
+      margin: 2pt 0 0;
+    }
+    .url-box {
+      background: rgba(255, 255, 255, 0.13);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 7pt;
+      padding: 6.5pt 9pt;
+      text-align: right;
+      font-size: 8pt;
+      line-height: 1.45;
+      white-space: nowrap;
+    }
+    .url-box strong {
+      display: block;
+      color: #8DE5C8;
+      font-size: 8.4pt;
+    }
+
+    /* Section */
+    .sec {
+      border: 1px solid #D5E2F0;
+      border-radius: 8pt;
+      padding: 8.5pt 11pt;
+      background: #FFFFFF;
+    }
+    .sec-title {
+      margin: 0 0 5.5pt;
+      font-size: 10.5pt;
+      font-weight: 900;
+      color: #0B1F3A;
+      display: flex;
+      align-items: center;
+      gap: 5pt;
+      border-bottom: 1.5px solid #E6EFF8;
+      padding-bottom: 3.5pt;
+    }
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 15pt;
+      height: 15pt;
+      border-radius: 4pt;
+      background: #0B1F3A;
+      color: #FFFFFF;
+      font-size: 8.5pt;
+      font-weight: 800;
+    }
+    p { margin: 0 0 4pt; }
+    p:last-child { margin-bottom: 0; }
+
+    /* Grids & Boxes */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7pt;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6.5pt;
+    }
+    .mini-box {
+      background: #F5F9FD;
+      border: 1px solid #DCE7F3;
+      border-radius: 6pt;
+      padding: 6.5pt 8pt;
+    }
+    .mini-box h4 {
+      margin: 0 0 3pt;
+      font-size: 8.8pt;
+      font-weight: 800;
+      color: #133158;
+    }
+    .mini-box p, .mini-box li {
+      font-size: 8.3pt;
+      color: #324964;
+      line-height: 1.42;
+    }
+    ul {
+      margin: 2pt 0 0;
+      padding-left: 13pt;
+    }
+    li { margin-bottom: 2pt; }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8.2pt;
+      margin-top: 3pt;
+    }
+    th, td {
+      border: 1px solid #D3E0EE;
+      padding: 4.5pt 6pt;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #EDF4FC;
+      color: #0B1F3A;
+      font-weight: 800;
+    }
+    td.num, th.num {
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .highlight-row {
+      background: #F1FBF7;
+      font-weight: 700;
+    }
+
+    /* Badges & Callouts */
+    .pill {
+      display: inline-block;
+      padding: 1pt 5pt;
+      border-radius: 999px;
+      font-size: 7.5pt;
+      font-weight: 800;
+    }
+    .pill-open { background: #E6F7F2; color: #0C8F6E; }
+    .pill-caution { background: #FEF5E6; color: #C76A08; }
+    .pill-blocked { background: #FDECEF; color: #C82838; }
+
+    .callout-warn {
+      background: #FFF8EC;
+      border: 1px solid #F5CE87;
+      border-radius: 6.5pt;
+      padding: 7pt 9.5pt;
+      font-size: 8.3pt;
+      color: #5C3700;
+    }
+    .callout-warn strong { color: #8A4A00; }
+
+    .step-flow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6pt;
+      margin-top: 3pt;
+    }
+    .step-card {
+      background: #F7FAFE;
+      border: 1px solid #D6E4F2;
+      border-radius: 6pt;
+      padding: 6pt 7pt;
+    }
+    .step-badge {
+      display: inline-block;
+      font-size: 7.4pt;
+      font-weight: 800;
+      color: #FFFFFF;
+      background: #1D4678;
+      padding: 1pt 5pt;
+      border-radius: 4pt;
+      margin-bottom: 3pt;
+    }
+    .step-card h5 {
+      margin: 0 0 2pt;
+      font-size: 8.4pt;
+      color: #0B1F3A;
+    }
+    .step-card p {
+      font-size: 7.9pt;
+      color: #415975;
+      line-height: 1.38;
+    }
+
+    .footer-note {
+      margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+      font-size: 7.6pt;
+      color: #6B7F98;
+      border-top: 1px solid #E2ECF5;
+      padding-top: 4pt;
+    }
+  </style>
+</head>
+<body>
+  <!-- ==================== PAGE 1 ==================== -->
+  <div class="page">
+    <header class="doc-header">
+      <div>
+        <p class="doc-kicker">2026 목포해양대학교 GPS교육혁신본부 바이브코딩 경진대회 작품 설명서</p>
+        <h1 class="doc-title">Arctic Captain : 북극항로 선장 시뮬레이터</h1>
+        <p class="doc-sub">NSIDC 월별 해빙 실측·예측 데이터 기반 항해 가능 달력 · 5단계 선장 미션 퀴즈 · 장기 추세 학습 웹서비스</p>
+      </div>
+      <div class="url-box">
+        <strong>실행 URL (모바일/PC 지원)</strong>
+        https://tripleseoi3-ai.github.io/arctic-captain/<br/>
+        <span style="opacity:0.85">저장소: github.com/tripleseoi3-ai/arctic-captain</span>
+      </div>
+    </header>
+
+    <!-- 1. 작품 개요 및 문제 정의 -->
+    <section class="sec">
+      <h2 class="sec-title"><span class="sec-num">1</span> 작품 개요 · 문제 정의 및 차별성</h2>
+      <div class="grid-3">
+        <div class="mini-box">
+          <h4>🎯 대상 (Who)</h4>
+          <p>북극항로(NSR)와 극지 해빙 변화를 처음 배우는 <strong>해양대 재학생(항해·해운 전공 입문자)</strong> 및 기후·해양 교양 수강생</p>
+        </div>
+        <div class="mini-box">
+          <h4>❗ 해결하려는 문제 (Problem)</h4>
+          <p>교과서·정적 그래프만으로는 해빙 감소에 따른 출항 시기 변화를 체감하기 어렵고, 전문가용 극지 운항 도구는 학생이 직접 조작하며 학습하기에 지나치게 복잡함</p>
+        </div>
+        <div class="mini-box">
+          <h4>✨ 차별성 (Uniqueness)</h4>
+          <p>단순 예측 차트에 그치지 않고 <strong>① 선박 등급별 시뮬레이션 달력 → ② 선장 의사결정 퀴즈 → ③ 장기 추세·기후위기 인사이트</strong>로 이어지는 학생 맞춤형 학습 루프 구현</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. 주요 기능 및 화면 구성 -->
+    <section class="sec">
+      <h2 class="sec-title"><span class="sec-num">2</span> 주요 기능 및 화면 구성 (모바일 우선 · PC 반응형 · 하단 3탭 구조)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:17%">화면 (하단 탭)</th>
+            <th style="width:48%">핵심 기능 및 인터랙션</th>
+            <th style="width:35%">교육적 학습 효과</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>화면 1.<br/>항해 달력</strong><br/><span class="pill pill-open">시뮬레이터</span></td>
+            <td>
+              • 1979~2035년 연도 선택(◀/▶·드롭다운) 및 빠른 이동(<code>1985·2012·2024·2030</code>)<br/>
+              • 월별 해빙 면적(실측/예측)과 <span class="pill pill-open">가능</span> <span class="pill pill-caution">주의</span> <span class="pill pill-blocked">불가</span> 판정·게이지 표시<br/>
+              • 선박 프리셋(<code>일반 상선 ≤5.0</code> / <code>내빙선 ≤6.5</code> / <code>쇄빙선 ≤9.0</code>) + 임계값 슬라이더 조작 시 12개월 달력 즉시 갱신<br/>
+              • 미래 연도 선택 시 <strong>SARIMA(95% 신뢰구간)</strong> vs <strong>기준선</strong> 전환 비교
+            </td>
+            <td>
+              선박의 내빙 성능과 연도·계절에 따라 북극항로 통항 창구(Ice Window)가 어떻게 달라지는지 직접 조작하며 직관적으로 체감
+            </td>
+          </tr>
+          <tr>
+            <td><strong>화면 2.<br/>선장 퀴즈</strong><br/><span class="pill pill-caution">5단계 미션</span></td>
+            <td>
+              • 실제 NSIDC 수치 기반 5개 실전 시나리오(① 1985 vs 2024 변화, ② 선박 등급 판단, ③ 2012 역대 최소 해빙, ④ 2030년 11월 모델 판정 차이, ⑤ 2035년 95% 신뢰구간 해석)<br/>
+              • <code>힌트 데이터 보기</code>, <code>달력에서 확인 ↗</code>, 정답 즉시 해설 제공<br/>
+              • 완료 시 <strong>최종 선장 등급 리포트</strong> + <code>틀린 문제만 다시 풀기</code> (<code>localStorage</code> 저장)
+            </td>
+            <td>
+              단순 암기가 아닌 데이터 탐색→선장 의사결정→해설 피드백의 능동적 학습 및 오개념 교정
+            </td>
+          </tr>
+          <tr>
+            <td><strong>화면 3.<br/>추세·안내</strong><br/><span class="pill pill-blocked">인사이트</span></td>
+            <td>
+              • <strong>1979~2035 연도별 항해 가능 개월 수</strong>(막대+5년 이동평균) 및 <strong>9월 최소 해빙 면적</strong>(실측·기준선·SARIMA 95% 신뢰구간 밴드) SVG 그래프<br/>
+              • 선박 등급 필터 연동, <strong>항로 단축(해운) vs 기후위기(환경)</strong> 양면성 카드, 검증 오차표 및 교육용 한계 고지 아코디언
+            </td>
+            <td>
+              항해 가능 기간 확대가 지구 온난화의 신호임을 장기 데이터로 통합 이해하고, 예측 불확실성과 한계 학습
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 3. 실제 데이터 및 예측 모델 검증 -->
+    <section class="sec">
+      <h2 class="sec-title"><span class="sec-num">3</span> 실측 데이터 전처리 및 예측 모델 비교 (NSIDC Sea Ice Index v4.0)</h2>
+      <p>
+        미국 국립빙설자료센터(NSIDC) 공식 월별 북극 해빙 면적(G02135 v4.0, <strong>1979년 1월~2026년 10월, 총 574개월</strong>)을 수집했습니다.
+        위성 센서 교체로 발생한 2개월 결측(<code>1987-12, 1988-01</code>)은 인접 연도 동월 평균으로 보간했으며, 1979~2020년 학습 후 최근 5년(<code>2021~2025, 60개월</code>) 홀드아웃 검증으로 두 모델을 비교했습니다.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:28%">예측 모델</th>
+            <th style="width:32%">모델 수식 · 특징</th>
+            <th class="num" style="width:12%">검증 MAE</th>
+            <th class="num" style="width:12%">검증 RMSE</th>
+            <th class="num" style="width:16%">2030년 9월 예측</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>기준선 (월별 평균 + 선형 추세)</td>
+            <td>월별 계절 평균 + 전체 선형 감소 추세(연 -0.0511 M km²)</td>
+            <td class="num">0.454</td>
+            <td class="num">0.542</td>
+            <td class="num">4.45 M km²</td>
+          </tr>
+          <tr class="highlight-row">
+            <td>SARIMA(1,0,0)(0,1,1)<sub>12</sub> + Drift</td>
+            <td>12개월 계절차분 + 월간 관성(φ₁=0.738) + 계절 MA(Θ₁₂=-0.778) + 95% 신뢰구간</td>
+            <td class="num">0.437</td>
+            <td class="num">0.497</td>
+            <td class="num">4.31 (3.54~5.07)</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="margin-top:4pt; font-size:8pt; color:#475F7A;">
+        ※ 내빙선(≤6.5 M km²) 기준 연평균 항해 가능 기간: <strong>1980년대 0.1개월 → 2020~2026년 2.9개월 → 2030~2035년 예측 3.0개월</strong> (1985년 9월 6.70 → 2012년 역대 최소 3.57 → 2024년 9월 4.35 M km²).
+      </p>
+    </section>
+
+    <div class="footer-note">
+      <span>Arctic Captain : 북극항로 선장 시뮬레이터</span>
+      <span>1 / 2 페이지</span>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 2 ==================== -->
+  <div class="page">
+    <!-- 4. 생성형 AI 활용 과정 및 문제 해결 -->
+    <section class="sec">
+      <h2 class="sec-title"><span class="sec-num">4</span> 생성형 AI(바이브코딩) 활용 과정 및 문제 해결·개선 사례</h2>
+      <div class="step-flow">
+        <div class="step-card">
+          <span class="step-badge">STEP 1 · 기획(PRD)</span>
+          <h5>범위 축소 및 3탭 설계</h5>
+          <p>복잡한 GIS 지도를 제외하고 북극 전체 월별 면적에 집중. AI와 기능 3개·화면 3개·저장 방식 기획표(PRD)를 선확정</p>
+        </div>
+        <div class="step-card">
+          <span class="step-badge">STEP 2 · 데이터·모델</span>
+          <h5>실측 수집 및 SARIMA</h5>
+          <p>NSIDC v4.0 CSV 12종 자동 수집·결측 보간·기준선 vs SARIMA 추정 및 95% 신뢰구간 사전 계산 파이프라인 구축</p>
+        </div>
+        <div class="step-card">
+          <span class="step-badge">STEP 3 · 단계별 구현</span>
+          <h5>화면 1→2→3 점진 빌드</h5>
+          <p>첫 화면(달력)을 모바일에서 먼저 검증한 뒤 선장 퀴즈(화면 2), SVG 장기 추세 그래프(화면 3)를 순차 추가</p>
+        </div>
+        <div class="step-card">
+          <span class="step-badge">STEP 4 · 배포·검증</span>
+          <h5>무중단 정적 호스팅</h5>
+          <p>DOM ID 자동 정합성 검사, 57년×12개월 데이터 검증 후 GitHub Pages 정적 배포로 HTTPS 상시 접속 확보</p>
+        </div>
+      </div>
+
+      <table style="margin-top:6pt;">
+        <thead>
+          <tr>
+            <th style="width:22%">발생한 문제 / 초기 한계</th>
+            <th style="width:45%">AI 협업 프롬프트 및 해결·개선 과정</th>
+            <th style="width:33%">개선 결과</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>① 무료 서버 슬립 및 로컬 실행 환경 제약</strong></td>
+            <td>실시간 Python 서버 배포 시 심사 중 슬립·접속 불가 위험을 발견. AI와 협의해 사전 계산 스크립트로 JSON/JS 데이터를 미리 추출하고, 외부 차트 라이브러리 없는 순수 정적 웹(HTML/CSS/JS+SVG)으로 전환</td>
+            <td>GitHub Pages 기반 <strong>1초 이내 로딩·심사 기간 100% 무중단 접속</strong> 및 모바일 최적화 달성</td>
+          </tr>
+          <tr>
+            <td><strong>② 단순 면적 슬라이더의 낮은 직관성</strong></td>
+            <td>"해빙 면적 5.5 M km²" 숫자만 제시하면 학습자가 체감하기 어렵다는 피드백을 반영해, 해양 전공 개념을 녹인 <strong>선박 등급 프리셋 3종(일반 상선·내빙선·쇄빙선)</strong>을 우선 배치하고 미세 조정 슬라이더를 하단에 결합</td>
+            <td>클릭 1회로 선박 성능별 출항 가능 월 차이를 비교할 수 있어 <strong>사용자 편의성·교육성 동시 향상</strong></td>
+          </tr>
+          <tr>
+            <td><strong>③ 예측 모델 비교의 학습 연결 부족</strong></td>
+            <td>단순 4지선다 퀴즈 대신 실제 데이터에서 모델 판정이 엇갈리는 <strong>2030년 11월(기준선 8.91 가능 vs SARIMA 9.04 주의)</strong>과 <strong>2035년 10월 신뢰구간 상한 초과</strong> 사례를 AI로 탐색해 미션 4·5번에 반영</td>
+            <td>통계 모델 검증(MAE/RMSE)과 미래 예측 불확실성까지 배우는 <strong>데이터 리터러시 퀴즈</strong> 완성</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 5. 교육적 활용 방안 및 이용 방법 -->
+    <section class="sec">
+      <h2 class="sec-title"><span class="sec-num">5</span> 교육적 활용 방안 및 이용 방법</h2>
+      <div class="grid-2">
+        <div class="mini-box">
+          <h4>🎓 대학 전공·교양 수업 활용 시나리오 (3단계)</h4>
+          <ul>
+            <li><strong>1단계 탐색 (10분)</strong>: 학생이 휴대폰으로 접속해 <code>1985→2024→2030</code>년과 선박 등급을 바꿔보며 통항 가능 월 변화를 직접 기록</li>
+            <li><strong>2단계 실습 평가 (10분)</strong>: <code>선장 퀴즈</code> 5단계 미션 수행 후 최종 선장 등급 리포트 확인 및 <code>틀린 문제만 다시 풀기</code>로 오개념 보완</li>
+            <li><strong>3단계 토론 마무리 (10분)</strong>: <code>추세·안내</code> 화면의 1979~2035 그래프와 <em>항로 단축 vs 기후위기</em> 카드를 보며 해운 경제성과 극지 환경 보전 딜레마 토론</li>
+          </ul>
+        </div>
+        <div class="mini-box">
+          <h4>📱 서비스 이용 방법 (설치·회원가입 불필요)</h4>
+          <ul>
+            <li><strong>접속</strong>: 모바일·PC 브라우저에서 <code>https://tripleseoi3-ai.github.io/arctic-captain/</code> 접속</li>
+            <li><strong>달력 시뮬레이션</strong>: 상단 연도·빠른 이동 버튼과 하단 선박 프리셋·슬라이더를 조작하고 1~12월 셀을 터치해 상세 판정 확인</li>
+            <li><strong>퀴즈 도전</strong>: 하단 <code>선장 퀴즈</code> 탭에서 힌트 데이터·달력 연동 기능을 활용해 5문항 풀이 후 리포트 확인</li>
+            <li><strong>추세 확인</strong>: 하단 <code>추세·안내</code> 탭에서 그래프 전환(가능 개월 수 ↔ 9월 면적) 및 모델 검증표 열람</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. 교육용 한계 고지 및 향후 계획 -->
+    <section class="sec">
+      <h2 class="sec-title"><span class="sec-num">6</span> 교육용 한계 고지 및 향후 발전 방향</h2>
+      <div class="callout-warn">
+        <strong>⚠️ 교육용 시뮬레이터 한계 명시 (신뢰성 및 안전성 원칙)</strong><br/>
+        본 서비스는 미국 NSIDC의 <strong>북극 전체 월별 해빙 면적(Extent)</strong>만을 단순화하여 만든 <strong>교육·학습 전용 시뮬레이터</strong>입니다.
+        실제 북극항로 운항 의사결정에는 구간별 해빙 두께·밀집도, 기상·해류, 쇄빙 지원 여부 및 IMO 극지코드(Polar Code) 규정이 필수적이므로 <strong>실제 운항 판단용으로 사용할 수 없습니다.</strong> (웹앱 첫 화면·모달·안내 탭에 상시 고지)
+      </div>
+      <div class="grid-2" style="margin-top:6pt;">
+        <div class="mini-box">
+          <h4>🔧 기술적 완성도 및 확장성</h4>
+          <p>브라우저 <code>localStorage</code>로 마지막 선박 설정·최고 점수·오답 목록을 자동 저장하며, 사전 계산 데이터 스크립트 재실행만으로 신규 월별 NSIDC 실측 데이터를 손쉽게 업데이트할 수 있는 구조입니다.</p>
+        </div>
+        <div class="mini-box">
+          <h4>🚀 향후 고도화 방향</h4>
+          <p>① 북동항로(NSR)·북서항로(NWP) 해역별 해빙 면적 비교 모드 추가, ② 교수자용 수업 퀴즈 문항 커스터마이징 기능, ③ 영문 전환 지원으로 국제 해사 교육 교류 활용.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer-note">
+      <span>접속 URL: https://tripleseoi3-ai.github.io/arctic-captain/</span>
+      <span>2 / 2 페이지</span>
+    </div>
+  </div>
+</body>
+</html>

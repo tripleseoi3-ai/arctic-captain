@@ -146,7 +146,6 @@
   const infoModal = document.getElementById("infoModal");
   const closeModalBtn = document.getElementById("closeModalBtn");
   const infoModalBody = document.getElementById("infoModalBody");
-  const miniModelPreview = document.getElementById("miniModelPreview");
 
   // Populate Year Select (1979 ~ 2035)
   for (let yr = MIN_YEAR; yr <= MAX_YEAR; yr++) {
@@ -369,13 +368,6 @@
       ${tableHtml}
       <h3>3. 교육용 한계 고지</h3>
       <p>본 앱은 북극 전체 월별 해빙 면적(Extent)만을 단순화한 교육용 시뮬레이터입니다. 실제 북극항로 운항 판단에는 해빙 두께·밀집도, 구간별 빙황, 기상 및 국제 극지코드(Polar Code) 규정이 필수이므로 실제 항해에 사용할 수 없습니다.</p>
-    `;
-
-    miniModelPreview.innerHTML = `
-      <strong>사전 계산 완료된 NSIDC v4.0 모델 요약</strong><br/>
-      • 실측 구간: ${m.observedStart} ~ ${m.observedEnd} (${m.observedMonths}개월)<br/>
-      • 기준선 검증 오차: MAE ${b.mae.toFixed(3)} / RMSE ${b.rmse.toFixed(3)}<br/>
-      • SARIMA 검증 오차: MAE ${s.mae.toFixed(3)} / RMSE ${s.rmse.toFixed(3)}
     `;
   }
 
@@ -799,7 +791,334 @@
 
   goTrendBtn.addEventListener("click", () => switchTab("trend"));
 
+  // =========================================================
+  // SCREEN 3: 1979~2035 장기 추세 그래프 & 모델/한계 안내
+  // =========================================================
+  const trendState = {
+    chartType: "months", // "months" | "september"
+    ship: "iceclass"
+  };
+
+  const trendStatRow = document.getElementById("trendStatRow");
+  const chartTabBtns = document.querySelectorAll(".chart-tab-btn[data-chart]");
+  const trendShipBtns = document.querySelectorAll(".filter-pill[data-trend-ship]");
+  const trendChartContainer = document.getElementById("trendChartContainer");
+  const trendChartLegend = document.getElementById("trendChartLegend");
+  const trendChartCaption = document.getElementById("trendChartCaption");
+  const toggleModelAccBtn = document.getElementById("toggleModelAccBtn");
+  const modelAccArrow = document.getElementById("modelAccArrow");
+  const modelAccBody = document.getElementById("modelAccBody");
+  const trendModelTableWrap = document.getElementById("trendModelTableWrap");
+  const toggleLimitAccBtn = document.getElementById("toggleLimitAccBtn");
+  const limitAccArrow = document.getElementById("limitAccArrow");
+  const limitAccBody = document.getElementById("limitAccBody");
+  const trendLimitBody = document.getElementById("trendLimitBody");
+
+  function computeYearlySeries(shipKey) {
+    const preset = SHIP_PRESETS[shipKey] || SHIP_PRESETS.iceclass;
+    const rows = [];
+    for (let yr = MIN_YEAR; yr <= MAX_YEAR; yr++) {
+      const recs = DATA.years[String(yr)];
+      let openMonthsSarima = 0;
+      let openMonthsBase = 0;
+      const isFuture = yr >= 2027;
+      recs.forEach((r) => {
+        const vS = r.type === "obs" ? r.extent : r.sarima;
+        const vB = r.type === "obs" ? r.extent : r.baseline;
+        if (vS <= preset.openMax) openMonthsSarima++;
+        if (vB <= preset.openMax) openMonthsBase++;
+      });
+      const sep = recs[8];
+      rows.push({
+        year: yr,
+        isFuture,
+        openSarima: openMonthsSarima,
+        openBase: openMonthsBase,
+        sepObs: sep.type === "obs" ? sep.extent : null,
+        sepSarima: sep.type === "fc" ? sep.sarima : sep.extent,
+        sepBase: sep.type === "fc" ? sep.baseline : sep.extent,
+        sepLo: sep.type === "fc" ? sep.lo95 : null,
+        sepHi: sep.type === "fc" ? sep.hi95 : null
+      });
+    }
+    return rows;
+  }
+
+  function avg(arr) {
+    if (!arr.length) return 0;
+    return arr.reduce((a, b) => a + b, 0) / arr.length;
+  }
+
+  function renderMonthsChart(rows, preset) {
+    const W = 440, H = 220;
+    const pad = { top: 20, right: 16, bottom: 32, left: 32 };
+    const plotW = W - pad.left - pad.right;
+    const plotH = H - pad.top - pad.bottom;
+    const maxY = Math.max(6, Math.max(...rows.map((r) => r.openSarima)) + 1);
+    const barW = plotW / rows.length;
+
+    const xOf = (i) => pad.left + i * barW;
+    const yOf = (v) => pad.top + plotH - (v / maxY) * plotH;
+
+    let gridSvg = "";
+    for (let v = 0; v <= maxY; v += 2) {
+      const y = yOf(v);
+      gridSvg += `<line x1="${pad.left}" y1="${y.toFixed(1)}" x2="${W - pad.right}" y2="${y.toFixed(1)}" stroke="#E1EBF5" stroke-width="1" />`;
+      gridSvg += `<text x="${pad.left - 6}" y="${(y + 3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="#6E829B">${v}</text>`;
+    }
+
+    // Divider between observed (~2026) and forecast (2027~)
+    const divIdx = rows.findIndex((r) => r.year === 2027);
+    const divX = xOf(divIdx);
+    const fcBg = `<rect x="${divX.toFixed(1)}" y="${pad.top}" width="${(W - pad.right - divX).toFixed(1)}" height="${plotH}" fill="#F3ECFF" opacity="0.65" />`;
+    const divLine = `<line x1="${divX.toFixed(1)}" y1="${pad.top}" x2="${divX.toFixed(1)}" y2="${H - pad.bottom}" stroke="#7C3AED" stroke-dasharray="3 3" stroke-width="1" />`;
+    const fcLabel = `<text x="${(divX + 4).toFixed(1)}" y="${pad.top + 11}" font-size="9.5" font-weight="700" fill="#6D28D9">예측(SARIMA)</text>`;
+
+    let barsSvg = "";
+    rows.forEach((r, i) => {
+      const h = (r.openSarima / maxY) * plotH;
+      const y = pad.top + plotH - h;
+      const fill = r.isFuture ? "#7C3AED" : r.openSarima > 0 ? "#0C8F6E" : "#CBD5E1";
+      const opacity = r.isFuture ? "0.78" : "0.88";
+      barsSvg += `<rect x="${(xOf(i) + 1).toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(2, barW - 2).toFixed(1)}" height="${Math.max(1.5, h).toFixed(1)}" rx="1.5" fill="${fill}" opacity="${opacity}"><title>${r.year}년: ${r.openSarima}개월 (${r.isFuture ? "예측" : "실측"})</title></rect>`;
+    });
+
+    // 5-year moving average smooth trend line
+    const maPoints = rows.map((_, i) => {
+      const start = Math.max(0, i - 2);
+      const end = Math.min(rows.length - 1, i + 2);
+      const slice = rows.slice(start, end + 1).map((r) => r.openSarima);
+      return `${(xOf(i) + barW / 2).toFixed(1)},${yOf(avg(slice)).toFixed(1)}`;
+    }).join(" ");
+
+    let xTicks = "";
+    [1980, 1990, 2000, 2010, 2020, 2026, 2035].forEach((yr) => {
+      const idx = rows.findIndex((r) => r.year === yr);
+      if (idx < 0) return;
+      const x = xOf(idx) + barW / 2;
+      xTicks += `<text x="${x.toFixed(1)}" y="${H - 10}" text-anchor="middle" font-size="10" fill="#4B607A">${yr}</text>`;
+    });
+
+    trendChartContainer.innerHTML = `
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="1979년부터 2035년까지 연도별 항해 가능 개월 수 그래프">
+        ${fcBg}
+        ${gridSvg}
+        ${barsSvg}
+        <polyline fill="none" stroke="#0B1F3A" stroke-width="2" stroke-linejoin="round" points="${maPoints}" />
+        ${divLine}
+        ${fcLabel}
+        ${xTicks}
+        <text x="${pad.left}" y="12" font-size="10" font-weight="700" fill="#4B607A">단위: 개월/년</text>
+      </svg>
+    `;
+
+    trendChartLegend.innerHTML = `
+      <span class="chart-legend-item"><i class="swatch-box" style="background:#0C8F6E"></i>NSIDC 실측 가능 개월</span>
+      <span class="chart-legend-item"><i class="swatch-box" style="background:#7C3AED"></i>SARIMA 예측</span>
+      <span class="chart-legend-item"><i class="swatch" style="background:#0B1F3A"></i>5년 이동평균 추세</span>
+    `;
+
+    const avg80s = avg(rows.filter((r) => r.year >= 1980 && r.year <= 1989).map((r) => r.openSarima));
+    const avg20s = avg(rows.filter((r) => r.year >= 2020 && r.year <= 2026).map((r) => r.openSarima));
+    const avg30s = avg(rows.filter((r) => r.year >= 2030 && r.year <= 2035).map((r) => r.openSarima));
+    trendChartCaption.innerHTML =
+      `<strong>${preset.name}(가능 ≤${preset.openMax.toFixed(1)} M km²)</strong> 기준으로 연평균 항해 가능 기간이 ` +
+      `1980년대 <strong>${avg80s.toFixed(1)}개월</strong> → 최근(2020~2026) <strong>${avg20s.toFixed(1)}개월</strong> → 2030년대 예측 <strong>${avg30s.toFixed(1)}개월</strong>로 뚜렷하게 늘어납니다.`;
+  }
+
+  function renderSeptemberChart(rows, preset) {
+    const W = 440, H = 225;
+    const pad = { top: 20, right: 16, bottom: 32, left: 34 };
+    const plotW = W - pad.left - pad.right;
+    const plotH = H - pad.top - pad.bottom;
+    const minY = 2.0, maxY = 10.0;
+
+    const xOf = (i) => pad.left + (i / (rows.length - 1)) * plotW;
+    const yOf = (v) => pad.top + plotH - ((v - minY) / (maxY - minY)) * plotH;
+
+    let gridSvg = "";
+    for (let v = 2; v <= 10; v += 2) {
+      const y = yOf(v);
+      gridSvg += `<line x1="${pad.left}" y1="${y.toFixed(1)}" x2="${W - pad.right}" y2="${y.toFixed(1)}" stroke="#E1EBF5" stroke-width="1" />`;
+      gridSvg += `<text x="${pad.left - 6}" y="${(y + 3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="#6E829B">${v}</text>`;
+    }
+
+    // Ship open threshold line
+    const threshClamped = Math.min(maxY, Math.max(minY, preset.openMax));
+    const ty = yOf(threshClamped);
+    const threshLine = `
+      <line x1="${pad.left}" y1="${ty.toFixed(1)}" x2="${W - pad.right}" y2="${ty.toFixed(1)}" stroke="#0C8F6E" stroke-dasharray="4 3" stroke-width="1.5" />
+      <text x="${pad.left + 4}" y="${(ty - 4).toFixed(1)}" font-size="9.5" font-weight="800" fill="#0C8F6E">${preset.name} 가능 기준 (${preset.openMax.toFixed(1)})</text>
+    `;
+
+    const obsRows = rows.filter((r) => !r.isFuture);
+    const lastObsIdx = obsRows.length - 1;
+    const fcRows = rows.slice(lastObsIdx); // include 2026 anchor
+
+    const obsPts = obsRows.map((r, i) => `${xOf(i).toFixed(1)},${yOf(r.sepObs).toFixed(1)}`).join(" ");
+    const sarPts = fcRows.map((r, k) => `${xOf(lastObsIdx + k).toFixed(1)},${yOf(r.sepSarima).toFixed(1)}`).join(" ");
+    const basePts = fcRows.map((r, k) => `${xOf(lastObsIdx + k).toFixed(1)},${yOf(r.sepBase).toFixed(1)}`).join(" ");
+
+    // 95% CI polygon for forecast years (2027..2035)
+    const ciStartIdx = lastObsIdx + 1;
+    const ciUpper = rows.slice(ciStartIdx).map((r, k) => `${xOf(ciStartIdx + k).toFixed(1)},${yOf(r.sepHi).toFixed(1)}`);
+    const ciLower = rows.slice(ciStartIdx).map((r, k) => `${xOf(ciStartIdx + k).toFixed(1)},${yOf(r.sepLo).toFixed(1)}`).reverse();
+    const anchorPt = `${xOf(lastObsIdx).toFixed(1)},${yOf(rows[lastObsIdx].sepObs).toFixed(1)}`;
+    const ciPoly = [anchorPt, ...ciUpper, ...ciLower].join(" ");
+
+    // 2012 minimum highlight
+    const idx2012 = rows.findIndex((r) => r.year === 2012);
+    const x12 = xOf(idx2012), y12 = yOf(rows[idx2012].sepObs);
+    const minCallout = `
+      <circle cx="${x12.toFixed(1)}" cy="${y12.toFixed(1)}" r="4" fill="#C82838" stroke="#FFFFFF" stroke-width="1.5" />
+      <text x="${(x12 - 4).toFixed(1)}" y="${(y12 + 14).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="800" fill="#C82838">2012 최소(3.57)</text>
+    `;
+
+    let xTicks = "";
+    [1980, 1990, 2000, 2010, 2020, 2026, 2035].forEach((yr) => {
+      const idx = rows.findIndex((r) => r.year === yr);
+      if (idx < 0) return;
+      xTicks += `<text x="${xOf(idx).toFixed(1)}" y="${H - 10}" text-anchor="middle" font-size="10" fill="#4B607A">${yr}</text>`;
+    });
+
+    trendChartContainer.innerHTML = `
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="1979년부터 2035년까지 9월 최소 해빙 면적 추세 및 예측 그래프">
+        ${gridSvg}
+        ${threshLine}
+        <polygon points="${ciPoly}" fill="#7C3AED" opacity="0.18" />
+        <polyline fill="none" stroke="#1D4678" stroke-width="2.2" stroke-linejoin="round" points="${obsPts}" />
+        <polyline fill="none" stroke="#D97706" stroke-width="1.8" stroke-dasharray="4 3" points="${basePts}" />
+        <polyline fill="none" stroke="#7C3AED" stroke-width="2.4" points="${sarPts}" />
+        ${minCallout}
+        ${xTicks}
+        <text x="${pad.left}" y="12" font-size="10" font-weight="700" fill="#4B607A">단위: million km² (9월)</text>
+      </svg>
+    `;
+
+    trendChartLegend.innerHTML = `
+      <span class="chart-legend-item"><i class="swatch" style="background:#1D4678"></i>NSIDC 실측</span>
+      <span class="chart-legend-item"><i class="swatch" style="background:#7C3AED"></i>SARIMA (95% 구간)</span>
+      <span class="chart-legend-item"><i class="swatch" style="background:#D97706"></i>기준선</span>
+    `;
+
+    trendChartCaption.innerHTML =
+      `9월 북극 해빙 면적은 <strong>1979년 7.05 M km² → 2012년 역대 최소 3.57 M km² → 2024년 4.35 M km²</strong>로 장기 감소 추세를 보입니다. ` +
+      `보라색 영역(95% 신뢰구간)이 미래로 갈수록 넓어지는 점은 장기 예측의 불확실성 증가를 보여줍니다.`;
+  }
+
+  function renderTrendScreen() {
+    const preset = SHIP_PRESETS[trendState.ship] || SHIP_PRESETS.iceclass;
+    const rows = computeYearlySeries(trendState.ship);
+
+    const avg80s = avg(rows.filter((r) => r.year >= 1980 && r.year <= 1989).map((r) => r.openSarima));
+    const avg20s = avg(rows.filter((r) => r.year >= 2020 && r.year <= 2026).map((r) => r.openSarima));
+    const avg30s = avg(rows.filter((r) => r.year >= 2030 && r.year <= 2035).map((r) => r.openSarima));
+    const diffNow = avg20s - avg80s;
+
+    trendStatRow.innerHTML = `
+      <div class="trend-stat-box">
+        <span class="trend-stat-label">1980년대 평균</span>
+        <strong class="trend-stat-val">${avg80s.toFixed(1)}개월</strong>
+        <span class="trend-stat-sub">과거 실측</span>
+      </div>
+      <div class="trend-stat-box">
+        <span class="trend-stat-label">2020~26년 평균</span>
+        <strong class="trend-stat-val">${avg20s.toFixed(1)}개월</strong>
+        <span class="trend-stat-sub">+${diffNow.toFixed(1)}개월 증가</span>
+      </div>
+      <div class="trend-stat-box">
+        <span class="trend-stat-label">2030~35년 예측</span>
+        <strong class="trend-stat-val">${avg30s.toFixed(1)}개월</strong>
+        <span class="trend-stat-sub">SARIMA 기준</span>
+      </div>
+    `;
+
+    chartTabBtns.forEach((btn) => {
+      const isActive = btn.dataset.chart === trendState.chartType;
+      btn.classList.toggle("active", isActive);
+      btn.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+
+    trendShipBtns.forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.trendShip === trendState.ship);
+    });
+
+    if (trendState.chartType === "months") {
+      renderMonthsChart(rows, preset);
+    } else {
+      renderSeptemberChart(rows, preset);
+    }
+  }
+
+  function populateTrendStaticSections() {
+    const m = DATA.meta;
+    const b = m.models.baseline;
+    const s = m.models.sarima;
+
+    trendModelTableWrap.innerHTML = `
+      <table class="modal-table">
+        <thead>
+          <tr><th>예측 모델</th><th>MAE</th><th>RMSE</th><th>특징</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>기준선<br/><small>월별평균+추세</small></td>
+            <td>${b.mae.toFixed(3)}</td>
+            <td>${b.rmse.toFixed(3)}</td>
+            <td>연 ${b.annualSlope.toFixed(3)} 선형감소</td>
+          </tr>
+          <tr>
+            <td><strong>SARIMA</strong><br/><small>(1,0,0)(0,1,1)12</small></td>
+            <td><strong>${s.mae.toFixed(3)}</strong></td>
+            <td><strong>${s.rmse.toFixed(3)}</strong></td>
+            <td>계절차분 + 95% 신뢰구간</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="model-note">
+        * 홀드아웃 검증 구간: <strong>${b.valPeriod}</strong> (1979~2020년 학습 → 최근 5년 60개월 예측 평가).
+        SARIMA가 두 오차 지표(MAE, RMSE) 모두 기준선보다 낮은 오차를 기록했습니다.
+      </p>
+    `;
+
+    trendLimitBody.innerHTML = `
+      <ul class="limit-list">
+        <li><strong>데이터 출처</strong>: ${m.source} (실측 ${m.observedStart} ~ ${m.observedEnd}, 총 ${m.observedMonths}개월).</li>
+        <li><strong>결측 보간</strong>: 위성 센서 교체 결측(${m.interpolatedMonths.join(", ")}) 2개월은 인접 연도 동월 평균으로 보간해 시계열 연속성을 확보했습니다.</li>
+        <li><strong>교육용 한계</strong>: 본 시뮬레이터는 북극 전체 월별 해빙 면적(Extent)만을 단순화한 학습 도구입니다. 실제 북극항로 운항은 해빙 두께·밀집도, 구간별 빙황(NSR/NWP), 기상, 국제 극지코드(Polar Code) 규정이 필수이므로 <strong>실제 운항 판단에 사용할 수 없습니다.</strong></li>
+      </ul>
+    `;
+  }
+
+  chartTabBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      trendState.chartType = btn.dataset.chart;
+      renderTrendScreen();
+    });
+  });
+
+  trendShipBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      trendState.ship = btn.dataset.trendShip;
+      renderTrendScreen();
+    });
+  });
+
+  toggleModelAccBtn.addEventListener("click", () => {
+    const isOpen = !modelAccBody.classList.toggle("hidden");
+    toggleModelAccBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    modelAccArrow.textContent = isOpen ? "▴" : "▾";
+  });
+
+  toggleLimitAccBtn.addEventListener("click", () => {
+    const isOpen = !limitAccBody.classList.toggle("hidden");
+    toggleLimitAccBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    limitAccArrow.textContent = isOpen ? "▴" : "▾";
+  });
+
   populateMetaViews();
+  populateTrendStaticSections();
   render();
   renderQuiz();
+  renderTrendScreen();
 })();

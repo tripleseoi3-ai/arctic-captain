@@ -283,18 +283,87 @@
         </div>
       </section>
 
-      <!-- SCREEN 3 PLACEHOLDER (STEP 3에서 기능 추가 예정) -->
-      <section id="screen-trend" class="screen" aria-label="장기 추세 및 안내">
-        <div class="card placeholder-card">
-          <div class="placeholder-icon">📈</div>
-          <h2>1979~현재 장기 추세 &amp; 모델 비교 (STEP 3 예정)</h2>
-          <p>
-            다음 단계에서 연도별 항해 가능 개월 수 그래프, 9월 해빙 면적 추세,
-            항로 단축 vs 기후위기 인사이트가 이곳에 추가됩니다.
-          </p>
-          <div id="miniModelPreview" class="mini-model-preview"></div>
-          <button type="button" class="secondary-btn" data-nav="calendar">항해 달력으로 돌아가기</button>
+      <!-- SCREEN 3: 추세·안내 (1979~2035 장기 추세 · 모델 비교 · 교육용 한계) -->
+      <section id="screen-trend" class="screen" aria-label="장기 추세 및 모델 안내">
+        <!-- Headline Trend Summary -->
+        <div class="card trend-hero-card">
+          <p class="trend-kicker">1979 ~ 2035 장기 변화 분석</p>
+          <h2 class="trend-headline">1979년부터 북극항로 항해 가능 기간이 이렇게 늘었습니다</h2>
+          <div id="trendStatRow" class="trend-stat-row"></div>
         </div>
+
+        <!-- Interactive Chart Card -->
+        <div class="card trend-chart-card">
+          <div class="chart-tab-row" role="tablist" aria-label="추세 그래프 전환">
+            <button type="button" class="chart-tab-btn active" data-chart="months" role="tab" aria-selected="true">
+              항해 가능 개월 수
+            </button>
+            <button type="button" class="chart-tab-btn" data-chart="september" role="tab" aria-selected="false">
+              9월 최소 해빙 면적
+            </button>
+          </div>
+
+          <div class="trend-ship-filter" role="group" aria-label="선박 등급별 추세 비교">
+            <button type="button" class="filter-pill" data-trend-ship="merchant">🚢 일반 상선 (≤5.0)</button>
+            <button type="button" class="filter-pill active" data-trend-ship="iceclass">⛴️ 내빙선 (≤6.5)</button>
+            <button type="button" class="filter-pill" data-trend-ship="icebreaker">🧊 쇄빙선 (≤9.0)</button>
+          </div>
+
+          <div class="svg-chart-wrap">
+            <div id="trendChartContainer" class="svg-chart-container"></div>
+          </div>
+
+          <div id="trendChartLegend" class="chart-legend"></div>
+          <p id="trendChartCaption" class="chart-caption"></p>
+        </div>
+
+        <!-- Dual Insight: Shipping Opportunity vs Climate Crisis -->
+        <div class="card duality-card">
+          <h3 class="section-title">항해 가능 기간 증가의 양면성</h3>
+          <p class="section-hint">북극항로 확대는 해운의 기회인 동시에 지구 온난화의 경고 신호입니다</p>
+          <div class="duality-grid">
+            <div class="duality-box opportunity">
+              <div class="duality-head">🚢 해운 · 물류 관점</div>
+              <ul>
+                <li>동아시아↔유럽 항로가 수에즈 운하 경유 대비 거리·운항 일수 단축 가능성</li>
+                <li>하절기(8~10월) 내빙선 통항 창구가 1980년대 대비 뚜렷하게 확대</li>
+              </ul>
+            </div>
+            <div class="duality-box warning">
+              <div class="duality-head">🌍 기후 · 환경 관점</div>
+              <ul>
+                <li>9월 해빙 면적이 1979년 대비 약 35~40% 이상 감소(지구 온난화 가속)</li>
+                <li>해빙 반사율(알베도) 저하로 북극 온난화 증폭 및 극지 생태계·오염 위험 증가</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Model Performance Accordion -->
+        <div class="card accordion-card">
+          <button type="button" id="toggleModelAccBtn" class="accordion-trigger" aria-expanded="true">
+            <span>📐 기준선 vs SARIMA 모델 검증 비교표</span>
+            <span id="modelAccArrow" aria-hidden="true">▴</span>
+          </button>
+          <div id="modelAccBody" class="accordion-body">
+            <div id="trendModelTableWrap"></div>
+          </div>
+        </div>
+
+        <!-- Data Source & Educational Limit Accordion -->
+        <div class="card accordion-card">
+          <button type="button" id="toggleLimitAccBtn" class="accordion-trigger" aria-expanded="true">
+            <span>⚠️ 데이터 출처 및 교육용 한계 고지</span>
+            <span id="limitAccArrow" aria-hidden="true">▴</span>
+          </button>
+          <div id="limitAccBody" class="accordion-body">
+            <div id="trendLimitBody"></div>
+          </div>
+        </div>
+
+        <button type="button" class="secondary-btn full-btn" data-nav="calendar">
+          ← 항해 달력으로 돌아가기
+        </button>
       </section>
     </main>
 
