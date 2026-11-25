@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0B1F3A" />
+  <title>Arctic Captain : 북극항로 선장 시뮬레이터</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-top">
+        <div class="brand">
+          <div class="brand-icon" aria-hidden="true">⚓</div>
+          <div>
+            <h1 class="brand-title">Arctic Captain</h1>
+            <p class="brand-sub">북극항로 선장 시뮬레이터</p>
+          </div>
+        </div>
+        <button type="button" id="eduBadgeBtn" class="edu-badge" aria-label="교육용 안내 열기">
+          교육용 · NSIDC v4.0
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="app-main">
+      <!-- SCREEN 1: 항해 달력 -->
+      <section id="screen-calendar" class="screen active" aria-label="항해 가능 달력">
+        <!-- Year Controls Card -->
+        <div class="card control-card">
+          <div class="year-nav-row">
+            <button type="button" id="prevYearBtn" class="icon-btn" aria-label="이전 연도">◀</button>
+            <div class="year-select-wrap">
+              <label for="yearSelect" class="sr-only">출항 연도 선택</label>
+              <select id="yearSelect" class="year-select"></select>
+              <span id="yearDataTag" class="year-data-tag">NSIDC 실측</span>
+            </div>
+            <button type="button" id="nextYearBtn" class="icon-btn" aria-label="다음 연도">▶</button>
+          </div>
+
+          <div class="quick-years" role="group" aria-label="빠른 연도 이동">
+            <button type="button" class="chip-btn" data-year="1985" data-month="9">1985 과거</button>
+            <button type="button" class="chip-btn" data-year="2012" data-month="9">2012 최소</button>
+            <button type="button" class="chip-btn" data-year="2024" data-month="9">2024 현재</button>
+            <button type="button" class="chip-btn" data-year="2030" data-month="9">2030 미래</button>
+          </div>
+
+          <!-- Forecast Model Toggle (shown for forecast years/months) -->
+          <div id="modelToggleBox" class="model-toggle-box hidden">
+            <div class="model-toggle-head">
+              <span class="model-toggle-label">미래 예측 모델 선택</span>
+              <span id="modelMetricBadge" class="model-metric-badge"></span>
+            </div>
+            <div class="segmented-control" role="group" aria-label="예측 모델 선택">
+              <button type="button" class="seg-btn active" data-model="sarima">
+                SARIMA 예측 <span class="seg-sub">계절성+추세</span>
+              </button>
+              <button type="button" class="seg-btn" data-model="baseline">
+                기준선 예측 <span class="seg-sub">월별평균+추세</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero Verdict Card -->
+        <div id="verdictCard" class="card verdict-card status-open">
+          <div class="verdict-top">
+            <div>
+              <div class="verdict-date-row">
+                <span id="verdictDate" class="verdict-date">2024년 9월</span>
+                <span id="verdictSourcePill" class="source-pill">NSIDC 실측</span>
+              </div>
+              <p id="verdictShipLabel" class="verdict-ship-label">내빙선 (Ice-Class) 기준</p>
+            </div>
+            <div id="verdictStatusBadge" class="status-badge">✓ 항해 가능</div>
+          </div>
+
+          <div class="verdict-metric-row">
+            <div class="extent-readout">
+              <span class="extent-label">북극 전체 해빙 면적</span>
+              <div class="extent-value-wrap">
+                <strong id="verdictExtent" class="extent-value">4.35</strong>
+                <span class="extent-unit">million km²</span>
+              </div>
+            </div>
+            <div id="verdictCompareBox" class="compare-mini hidden"></div>
+          </div>
+
+          <!-- Threshold Gauge -->
+          <div class="gauge-wrap" aria-label="해빙 면적 기준 게이지">
+            <div class="gauge-bar">
+              <div id="gaugeOpenZone" class="gauge-zone zone-open"></div>
+              <div id="gaugeCautionZone" class="gauge-zone zone-caution"></div>
+              <div id="gaugeBlockedZone" class="gauge-zone zone-blocked"></div>
+              <div id="gaugeMarker" class="gauge-marker" title="현재 해빙 면적"></div>
+            </div>
+            <div class="gauge-labels">
+              <span>0</span>
+              <span id="gaugeOpenLabel">가능 ≤6.5</span>
+              <span id="gaugeCautionLabel">주의 ≤8.5</span>
+              <span>16 M km²</span>
+            </div>
+          </div>
+
+          <p id="verdictBrief" class="verdict-brief"></p>
+        </div>
+
+        <!-- 12-Month Navigable Calendar -->
+        <div class="card calendar-card">
+          <div class="section-head">
+            <div>
+              <h2 class="section-title"><span id="calYearTitle">2024</span>년 항해 가능 달력</h2>
+              <p class="section-hint">월을 눌러 상세 해빙 면적과 판정을 확인하세요</p>
+            </div>
+            <div id="calSummaryPills" class="summary-pills"></div>
+          </div>
+
+          <div id="calendarGrid" class="calendar-grid" role="grid" aria-label="12개월 항해 가능 달력"></div>
+
+          <div class="legend-row" aria-label="판정 범례">
+            <span class="legend-item"><i class="dot dot-open"></i>항해 가능</span>
+            <span class="legend-item"><i class="dot dot-caution"></i>주의</span>
+            <span class="legend-item"><i class="dot dot-blocked"></i>불가</span>
+          </div>
+        </div>
+
+        <!-- Ship Class Presets & Custom Threshold Sliders -->
+        <div class="card threshold-card">
+          <div class="section-head">
+            <div>
+              <h2 class="section-title">선박 등급 &amp; 판정 기준</h2>
+              <p class="section-hint">선박이나 기준값을 바꾸면 위 12개월 달력이 즉시 변합니다</p>
+            </div>
+            <button type="button" id="resetThresholdBtn" class="text-btn">초기화</button>
+          </div>
+
+          <div class="preset-grid" role="group" aria-label="선박 등급 프리셋">
+            <button type="button" class="preset-btn" data-preset="merchant">
+              <span class="preset-icon">🚢</span>
+              <span class="preset-name">일반 상선</span>
+              <span class="preset-range">≤ 5.0</span>
+            </button>
+            <button type="button" class="preset-btn active" data-preset="iceclass">
+              <span class="preset-icon">⛴️</span>
+              <span class="preset-name">내빙선</span>
+              <span class="preset-range">≤ 6.5</span>
+            </button>
+            <button type="button" class="preset-btn" data-preset="icebreaker">
+              <span class="preset-icon">🧊</span>
+              <span class="preset-name">쇄빙선</span>
+              <span class="preset-range">≤ 9.0</span>
+            </button>
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-row">
+              <div class="slider-head">
+                <label for="openSlider" class="slider-label">
+                  <i class="dot dot-open"></i> 항해 가능 기준 (이하)
+                </label>
+                <strong id="openSliderVal" class="slider-val">6.5 M km²</strong>
+              </div>
+              <input type="range" id="openSlider" min="3.0" max="12.0" step="0.1" value="6.5" />
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-head">
+                <label for="cautionSlider" class="slider-label">
+                  <i class="dot dot-caution"></i> 주의 기준 (이하)
+                </label>
+                <strong id="cautionSliderVal" class="slider-val">8.5 M km²</strong>
+              </div>
+              <input type="range" id="cautionSlider" min="4.0" max="14.5" step="0.1" value="8.5" />
+            </div>
+          </div>
+
+          <p id="customModeNote" class="custom-note hidden">
+            직접 조정한 기준이 적용 중입니다. 선박 버튼을 누르면 프리셋으로 돌아갑니다.
+          </p>
+        </div>
+
+        <!-- CTA to Quiz -->
+        <button type="button" id="goQuizBtn" class="cta-btn">
+          <span>이 조건으로 선장 출항 퀴즈 도전하기</span>
+          <span aria-hidden="true">→</span>
+        </button>
+
+        <!-- Educational Disclaimer -->
+        <aside class="disclaimer-box" aria-label="교육용 한계 고지">
+          <strong>⚠️ 교육용 시뮬레이터 안내</strong>
+          <p>
+            본 서비스는 미국 국립빙설자료센터(NSIDC)의 북극 전체 월별 해빙 면적 데이터(1979~2026)를
+            활용한 교육용 시뮬레이터입니다. 실제 북극항로 운항에는 구간별 해빙 두께·밀집도, 기상,
+            극지코드(Polar Code) 등 정밀 정보가 필요하므로 <strong>실제 운항 판단용으로 사용할 수 없습니다.</strong>
+          </p>
+        </aside>
+      </section>
+
+      <!-- SCREEN 2: 선장 퀴즈 (5단계 출항 미션) -->
+      <section id="screen-quiz" class="screen" aria-label="선장 출항 미션 퀴즈">
+        <!-- Quiz Progress & Status Card -->
+        <div id="quizHeaderCard" class="card quiz-header-card">
+          <div class="quiz-progress-top">
+            <div class="quiz-progress-meta">
+              <span id="quizModePill" class="quiz-mode-pill">5단계 선장 미션</span>
+              <span id="quizStepText" class="quiz-step-text">1 / 5</span>
+            </div>
+            <div id="quizScoreBadge" class="quiz-score-badge">현재 점수 0점</div>
+          </div>
+          <div class="progress-track" aria-hidden="true">
+            <div id="quizProgressFill" class="progress-fill" style="width: 20%"></div>
+          </div>
+          <div id="quizBestBanner" class="quiz-best-banner hidden"></div>
+        </div>
+
+        <!-- Active Question Area -->
+        <div id="quizPlayArea" class="quiz-play-area">
+          <div class="card mission-card">
+            <div id="quizTag" class="mission-tag">미션 1</div>
+            <div id="quizBadges" class="mission-badges"></div>
+            <h2 id="quizQuestion" class="mission-question"></h2>
+
+            <div class="hint-actions">
+              <button type="button" id="toggleHintBtn" class="hint-toggle-btn" aria-expanded="false">
+                <span>📊 힌트 데이터 보기</span>
+                <span id="hintArrow" aria-hidden="true">▾</span>
+              </button>
+              <button type="button" id="inspectCalendarBtn" class="inspect-cal-btn">
+                달력에서 확인 ↗
+              </button>
+            </div>
+
+            <div id="quizHintBox" class="hint-box hidden"></div>
+          </div>
+
+          <div id="quizChoices" class="choices-list" role="group" aria-label="퀴즈 선택지"></div>
+
+          <div id="quizFeedbackBox" class="card feedback-card hidden" aria-live="polite">
+            <div id="feedbackHeader" class="feedback-header"></div>
+            <p id="feedbackText" class="feedback-text"></p>
+            <button type="button" id="nextMissionBtn" class="cta-btn quiz-next-btn">
+              <span id="nextMissionLabel">다음 미션으로</span>
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Final Captain Report Area -->
+        <div id="quizReportArea" class="quiz-report-area hidden">
+          <div class="card report-hero-card">
+            <div id="reportMedal" class="report-medal" aria-hidden="true">🏆</div>
+            <p class="report-kicker">최종 선장 항해 평가 리포트</p>
+            <h2 id="reportRank" class="report-rank">북극항로 마스터 선장</h2>
+            <div class="report-score-row">
+              <strong id="reportScoreNum" class="report-score-num">5 / 5</strong>
+              <span id="reportAccuracy" class="report-accuracy">정답률 100%</span>
+            </div>
+            <p id="reportSummaryText" class="report-summary-text"></p>
+          </div>
+
+          <div class="card report-review-card">
+            <h3 class="section-title">미션별 핵심 요약</h3>
+            <p class="section-hint">틀린 미션은 아래 버튼으로 바로 다시 풀어볼 수 있습니다</p>
+            <div id="reportReviewList" class="review-list"></div>
+          </div>
+
+          <div class="report-actions">
+            <button type="button" id="retryWrongBtn" class="retry-wrong-btn hidden">
+              틀린 문제만 다시 풀기
+            </button>
+            <button type="button" id="restartQuizBtn" class="secondary-btn full-btn">
+              처음부터 다시 도전
+            </button>
+            <button type="button" id="goTrendBtn" class="cta-btn">
+              <span>1979~추세 그래프 보기</span>
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCREEN 3 PLACEHOLDER (STEP 3에서 기능 추가 예정) -->
+      <section id="screen-trend" class="screen" aria-label="장기 추세 및 안내">
+        <div class="card placeholder-card">
+          <div class="placeholder-icon">📈</div>
+          <h2>1979~현재 장기 추세 &amp; 모델 비교 (STEP 3 예정)</h2>
+          <p>
+            다음 단계에서 연도별 항해 가능 개월 수 그래프, 9월 해빙 면적 추세,
+            항로 단축 vs 기후위기 인사이트가 이곳에 추가됩니다.
+          </p>
+          <div id="miniModelPreview" class="mini-model-preview"></div>
+          <button type="button" class="secondary-btn" data-nav="calendar">항해 달력으로 돌아가기</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Tab Navigation -->
+    <nav class="bottom-nav" aria-label="주요 화면 이동">
+      <button type="button" class="nav-tab active" data-nav="calendar" aria-current="page">
+        <span class="nav-icon" aria-hidden="true">📅</span>
+        <span class="nav-label">항해 달력</span>
+      </button>
+      <button type="button" class="nav-tab" data-nav="quiz">
+        <span class="nav-icon" aria-hidden="true">🧭</span>
+        <span class="nav-label">선장 퀴즈</span>
+      </button>
+      <button type="button" class="nav-tab" data-nav="trend">
+        <span class="nav-icon" aria-hidden="true">📈</span>
+        <span class="nav-label">추세·안내</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Info Modal -->
+  <div id="infoModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="infoModalTitle">
+    <div class="modal-sheet">
+      <div class="modal-head">
+        <h2 id="infoModalTitle">데이터 &amp; 교육용 안내</h2>
+        <button type="button" id="closeModalBtn" class="icon-btn" aria-label="닫기">✕</button>
+      </div>
+      <div id="infoModalBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="data/sea_ice_data.js"></script>
+  <script src="data/quiz_data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
