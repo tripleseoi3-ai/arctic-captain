@@ -504,14 +504,15 @@
   function loadQuizRecord() {
     try {
       const saved = JSON.parse(localStorage.getItem(QUIZ_STORAGE_KEY) || "null");
-      if (!saved) return { bestScore: 0, bestRank: "", wrongIds: [] };
+      if (!saved) return { bestScore: 0, bestRank: "", wrongIds: [], wrongChoices: {} };
       return {
         bestScore: Number(saved.bestScore) || 0,
         bestRank: typeof saved.bestRank === "string" ? saved.bestRank : "",
-        wrongIds: Array.isArray(saved.wrongIds) ? saved.wrongIds : []
+        wrongIds: Array.isArray(saved.wrongIds) ? saved.wrongIds : [],
+        wrongChoices: saved.wrongChoices && typeof saved.wrongChoices === "object" ? saved.wrongChoices : {}
       };
     } catch (_) {
-      return { bestScore: 0, bestRank: "", wrongIds: [] };
+      return { bestScore: 0, bestRank: "", wrongIds: [], wrongChoices: {} };
     }
   }
 
@@ -590,10 +591,14 @@
       const bestText = quizRecord.bestScore > 0
         ? `최고 기록: ${quizRecord.bestScore}/${QUIZ_BANK.length} (${quizRecord.bestRank})`
         : "아직 완주 기록 없음";
-      const wrongText = quizRecord.wrongIds.length > 0
-        ? `저장된 오답 ${quizRecord.wrongIds.length}문제`
-        : "오답 없음";
-      quizBestBanner.innerHTML = `<span>${bestText}</span><strong>${wrongText}</strong>`;
+      const rightHtml = quizRecord.wrongIds.length > 0
+        ? `<button type="button" id="bannerOpenNoteBtn" class="banner-note-btn">📝 오답 노트 (${quizRecord.wrongIds.length})</button>`
+        : `<strong>오답 없음</strong>`;
+      quizBestBanner.innerHTML = `<span>${bestText}</span>${rightHtml}`;
+      const bannerBtn = document.getElementById("bannerOpenNoteBtn");
+      if (bannerBtn) {
+        bannerBtn.addEventListener("click", () => openStudyNoteModal());
+      }
     } else {
       quizBestBanner.classList.add("hidden");
     }
@@ -669,8 +674,16 @@
       id: q.id,
       tag: q.tag,
       correct: isCorrect,
+      selectedIdx,
       takeaway: q.takeaway
     });
+    if (!isCorrect) {
+      quizRecord.wrongChoices[q.id] = selectedIdx;
+      if (!quizRecord.wrongIds.includes(q.id)) {
+        quizRecord.wrongIds.push(q.id);
+      }
+      saveQuizRecord(quizRecord);
+    }
 
     // Highlight buttons
     const btns = quizChoices.querySelectorAll(".choice-btn");
@@ -744,6 +757,7 @@
     } else {
       retryWrongBtn.classList.add("hidden");
     }
+    updateStudyNoteEntryButton();
   }
 
   toggleHintBtn.addEventListener("click", () => {
@@ -1116,8 +1130,258 @@
     limitAccArrow.textContent = isOpen ? "▴" : "▾";
   });
 
+  // =========================================================
+  // AUTO STUDY NOTE AGENT (오답 항해 노트 자동 작성기: 목표->계획->실행->확인)
+  // =========================================================
+  const openStudyNoteBtn = document.getElementById("openStudyNoteBtn");
+  const studyNoteCountBadge = document.getElementById("studyNoteCountBadge");
+  const studyNoteModal = document.getElementById("studyNoteModal");
+  const closeStudyNoteBtn = document.getElementById("closeStudyNoteBtn");
+  const agentSteps = document.querySelectorAll(".agent-step[data-agent-step]");
+  const notePlanTitle = document.getElementById("notePlanTitle");
+  const noteSelectedCount = document.getElementById("noteSelectedCount");
+  const noteChecklist = document.getElementById("noteChecklist");
+  const notePreviewText = document.getElementById("notePreviewText");
+  const noteConfirmStatus = document.getElementById("noteConfirmStatus");
+  const copyNoteBtn = document.getElementById("copyNoteBtn");
+  const downloadNoteBtn = document.getElementById("downloadNoteBtn");
+  const printNoteBtn = document.getElementById("printNoteBtn");
+  const openDeleteConfirmBtn = document.getElementById("openDeleteConfirmBtn");
+
+  const deleteConfirmModal = document.getElementById("deleteConfirmModal");
+  const deleteConfirmDesc = document.getElementById("deleteConfirmDesc");
+  const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
+  const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
+
+  const noteState = {
+    selectedIds: new Set()
+  };
+
+  function setAgentStage(stageNum) {
+    agentSteps.forEach((el) => {
+      const s = parseInt(el.dataset.agentStep, 10);
+      el.classList.toggle("done", s < stageNum || stageNum === 4);
+      el.classList.toggle("active", s === stageNum && stageNum !== 4);
+    });
+  }
+
+  function updateStudyNoteEntryButton() {
+    const wrongCount = quizRecord.wrongIds.length;
+    if (wrongCount > 0) {
+      openStudyNoteBtn.firstElementChild.textContent = "📝 오답 항해 노트 자동 만들기";
+      studyNoteCountBadge.textContent = `오답 ${wrongCount}문제`;
+    } else {
+      openStudyNoteBtn.firstElementChild.textContent = "📝 핵심 복습 노트 자동 만들기";
+      studyNoteCountBadge.textContent = `전체 ${QUIZ_BANK.length}문제`;
+    }
+  }
+
+  function getNoteCandidateQuestions() {
+    if (quizRecord.wrongIds.length > 0) {
+      return {
+        isWrongOnly: true,
+        items: QUIZ_BANK.filter((q) => quizRecord.wrongIds.includes(q.id))
+      };
+    }
+    return {
+      isWrongOnly: false,
+      items: QUIZ_BANK.slice()
+    };
+  }
+
+  function buildStudyNoteString() {
+    const { isWrongOnly, items } = getNoteCandidateQuestions();
+    const chosen = items.filter((q) => noteState.selectedIds.has(q.id));
+    if (!chosen.length) {
+      return "포함할 문항을 1개 이상 선택해 주세요.";
+    }
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const header = [
+      `[Arctic Captain : 북극항로 선장 시뮬레이터]`,
+      `${isWrongOnly ? "오답 항해 복습 노트" : "전체 핵심 항해 복습 노트"} (생성일: ${dateStr}, 총 ${chosen.length}문제)`,
+      `서비스 주소: https://tripleseoi3-ai.github.io/arctic-captain/`,
+      `==================================================`
+    ];
+
+    const blocks = chosen.map((q, idx) => {
+      const wrongIdx = quizRecord.wrongChoices[q.id];
+      const hasWrong = typeof wrongIdx === "number" && wrongIdx !== q.answerIndex && q.choices[wrongIdx];
+      const lines = [
+        `${idx + 1}. [${q.tag}]`,
+        `- 조건: ${q.badges.join(" / ")}`,
+        `- 문제: ${q.question}`
+      ];
+      if (hasWrong) {
+        lines.push(`- 내가 고른 오답: (${CHOICE_LETTERS[wrongIdx]}) ${q.choices[wrongIdx]}`);
+      }
+      lines.push(`- 정답: (${CHOICE_LETTERS[q.answerIndex]}) ${q.choices[q.answerIndex]}`);
+      lines.push(`- 근거 데이터(NSIDC/예측): ${q.hintRows.map((r) => `${r.label} ${r.value}`).join(" | ")}`);
+      lines.push(`- 해설: ${q.explanation}`);
+      lines.push(`- 핵심 정리: ${q.takeaway}`);
+      return lines.join("\n");
+    });
+
+    return `${header.join("\n")}\n\n${blocks.join("\n\n")}\n\n※ 본 노트는 NSIDC v4.0 기반 교육용 시뮬레이터 학습 기록이며 실제 운항 판단용이 아닙니다.`;
+  }
+
+  function renderStudyNoteModal() {
+    const { isWrongOnly, items } = getNoteCandidateQuestions();
+    notePlanTitle.textContent = isWrongOnly
+      ? "저장된 오답 문항 선택 (계획)"
+      : "오답이 없어 전체 핵심 문항으로 정리합니다 (계획)";
+
+    noteChecklist.innerHTML = "";
+    items.forEach((q) => {
+      const label = document.createElement("label");
+      label.className = "note-check-item";
+      const checked = noteState.selectedIds.has(q.id);
+      label.innerHTML = `
+        <input type="checkbox" value="${q.id}" ${checked ? "checked" : ""} />
+        <span>${q.tag}</span>
+        <span class="note-check-tag ${isWrongOnly ? "wrong" : "review"}">${isWrongOnly ? "오답" : "핵심"}</span>
+      `;
+      const cb = label.querySelector("input");
+      cb.addEventListener("change", () => {
+        if (cb.checked) noteState.selectedIds.add(q.id);
+        else noteState.selectedIds.delete(q.id);
+        updateNotePreviewOnly();
+      });
+      noteChecklist.appendChild(label);
+    });
+
+    openDeleteConfirmBtn.disabled = quizRecord.wrongIds.length === 0;
+    openDeleteConfirmBtn.textContent = quizRecord.wrongIds.length > 0
+      ? `🗑️ 저장된 오답 기록 비우기 (${quizRecord.wrongIds.length}문제)`
+      : "🗑️ 저장된 오답 기록 없음";
+
+    updateNotePreviewOnly();
+  }
+
+  function updateNotePreviewOnly() {
+    const count = noteState.selectedIds.size;
+    noteSelectedCount.textContent = `${count}문제 선택`;
+    notePreviewText.textContent = buildStudyNoteString();
+    const disabled = count === 0;
+    copyNoteBtn.disabled = disabled;
+    downloadNoteBtn.disabled = disabled;
+    printNoteBtn.disabled = disabled;
+  }
+
+  function showNoteConfirmation(msg) {
+    const now = new Date();
+    const t = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+    setAgentStage(4);
+    noteConfirmStatus.textContent = `✓ ${msg} (${t})`;
+    noteConfirmStatus.classList.remove("hidden");
+  }
+
+  function openStudyNoteModal() {
+    const { items } = getNoteCandidateQuestions();
+    noteState.selectedIds = new Set(items.map((q) => q.id));
+    noteConfirmStatus.classList.add("hidden");
+    setAgentStage(2);
+    renderStudyNoteModal();
+    studyNoteModal.classList.remove("hidden");
+  }
+
+  openStudyNoteBtn.addEventListener("click", openStudyNoteModal);
+  closeStudyNoteBtn.addEventListener("click", () => studyNoteModal.classList.add("hidden"));
+  studyNoteModal.addEventListener("click", (e) => {
+    if (e.target === studyNoteModal) studyNoteModal.classList.add("hidden");
+  });
+
+  copyNoteBtn.addEventListener("click", async () => {
+    setAgentStage(3);
+    const text = buildStudyNoteString();
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      showNoteConfirmation(`${noteState.selectedIds.size}문제 오답 노트가 클립보드에 복사되었습니다.`);
+    } catch (_) {
+      showNoteConfirmation("복사 권한이 제한되어 미리보기 영역에서 직접 복사해 주세요.");
+    }
+  });
+
+  downloadNoteBtn.addEventListener("click", () => {
+    setAgentStage(3);
+    const text = buildStudyNoteString();
+    const now = new Date();
+    const ymd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+    const filename = `Arctic_Captain_오답항해노트_${ymd}.txt`;
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showNoteConfirmation(`${filename} 파일 저장이 완료되었습니다.`);
+  });
+
+  printNoteBtn.addEventListener("click", () => {
+    setAgentStage(3);
+    const text = buildStudyNoteString();
+    const w = window.open("", "_blank", "width=760,height=860");
+    if (w) {
+      const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      w.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>Arctic Captain 오답 항해 노트</title><style>body{font-family:"Malgun Gothic",sans-serif;padding:24px;line-height:1.65;font-size:13px;color:#111}pre{white-space:pre-wrap;font-family:inherit}</style></head><body><pre>${escaped}</pre></body></html>`);
+      w.document.close();
+      w.focus();
+      w.print();
+      showNoteConfirmation("인쇄/PDF 저장 창을 열었습니다.");
+    } else {
+      showNoteConfirmation("팝업이 차단되었습니다. 파일(.txt) 저장 또는 전체 복사를 이용해 주세요.");
+    }
+  });
+
+  // Irreversible Action: Require Explicit Confirmation Dialog Before Deletion
+  openDeleteConfirmBtn.addEventListener("click", () => {
+    if (quizRecord.wrongIds.length === 0) return;
+    setAgentStage(3);
+    deleteConfirmDesc.textContent = `현재 브라우저에 저장된 오답 ${quizRecord.wrongIds.length}문제의 기록이 모두 삭제됩니다.`;
+    deleteConfirmModal.classList.remove("hidden");
+  });
+
+  cancelDeleteBtn.addEventListener("click", () => {
+    deleteConfirmModal.classList.add("hidden");
+    setAgentStage(2);
+  });
+
+  deleteConfirmModal.addEventListener("click", (e) => {
+    if (e.target === deleteConfirmModal) {
+      deleteConfirmModal.classList.add("hidden");
+      setAgentStage(2);
+    }
+  });
+
+  confirmDeleteBtn.addEventListener("click", () => {
+    const deletedCount = quizRecord.wrongIds.length;
+    quizRecord.wrongIds = [];
+    quizRecord.wrongChoices = {};
+    saveQuizRecord(quizRecord);
+    deleteConfirmModal.classList.add("hidden");
+    renderQuizBanner();
+    updateStudyNoteEntryButton();
+    const { items } = getNoteCandidateQuestions();
+    noteState.selectedIds = new Set(items.map((q) => q.id));
+    renderStudyNoteModal();
+    showNoteConfirmation(`저장된 오답 ${deletedCount}문제 기록을 안전하게 삭제했습니다.`);
+  });
+
   populateMetaViews();
   populateTrendStaticSections();
+  updateStudyNoteEntryButton();
   render();
   renderQuiz();
   renderTrendScreen();

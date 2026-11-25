@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0B1F3A" />
   <title>Arctic Captain : 북극항로 선장 시뮬레이터</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
-  <link rel="stylesheet" href="styles.css?v=3" />
+  <link rel="stylesheet" href="styles.css?v=4" />
 </head>
 <body>
   <div class="app-shell">
@@ -269,6 +269,10 @@
           </div>
 
           <div class="report-actions">
+            <button type="button" id="openStudyNoteBtn" class="study-note-btn">
+              <span>📝 오답 항해 노트 자동 만들기</span>
+              <span id="studyNoteCountBadge" class="note-count-pill"></span>
+            </button>
             <button type="button" id="retryWrongBtn" class="retry-wrong-btn hidden">
               틀린 문제만 다시 풀기
             </button>
@@ -395,8 +399,81 @@
     </div>
   </div>
 
-  <script src="data/sea_ice_data.js?v=3"></script>
-  <script src="data/quiz_data.js?v=3"></script>
-  <script src="app.js?v=3"></script>
+  <!-- Added Screen 1: Auto Study Note Sheet (목표 -> 계획 -> 실행 -> 확인) -->
+  <div id="studyNoteModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="studyNoteTitle">
+    <div class="modal-sheet study-note-sheet">
+      <div class="modal-head">
+        <div>
+          <h2 id="studyNoteTitle">📝 오답 항해 노트 자동 작성기</h2>
+          <p class="modal-sub">틀린 문제를 손으로 옮겨 적지 않고 한 번에 정리합니다</p>
+        </div>
+        <button type="button" id="closeStudyNoteBtn" class="icon-btn" aria-label="닫기">✕</button>
+      </div>
+
+      <!-- 4-Stage Agent Stepper -->
+      <div class="agent-stepper" aria-label="자동 작성 4단계">
+        <span class="agent-step done" data-agent-step="1">1.목표</span>
+        <span class="agent-step active" data-agent-step="2">2.계획</span>
+        <span class="agent-step" data-agent-step="3">3.실행</span>
+        <span class="agent-step" data-agent-step="4">4.확인</span>
+      </div>
+
+      <div class="note-section">
+        <div class="note-sec-head">
+          <strong id="notePlanTitle">포함할 문항 선택 (계획)</strong>
+          <span id="noteSelectedCount" class="note-sel-badge">0문제 선택</span>
+        </div>
+        <div id="noteChecklist" class="note-checklist"></div>
+      </div>
+
+      <div class="note-section">
+        <div class="note-sec-head">
+          <strong>자동 생성된 오답 노트 미리보기</strong>
+          <span class="note-hint-mini">한글·노션 바로 붙여넣기 가능</span>
+        </div>
+        <pre id="notePreviewText" class="note-preview-box"></pre>
+      </div>
+
+      <div id="noteConfirmStatus" class="note-confirm-status hidden" aria-live="polite"></div>
+
+      <div class="note-action-grid">
+        <button type="button" id="copyNoteBtn" class="cta-btn note-primary-btn">
+          <span>📋 전체 복사하기</span>
+        </button>
+        <button type="button" id="downloadNoteBtn" class="secondary-btn note-action-btn">
+          💾 파일(.txt) 저장
+        </button>
+        <button type="button" id="printNoteBtn" class="secondary-btn note-action-btn">
+          🖨️ 인쇄 / PDF
+        </button>
+      </div>
+
+      <div class="note-danger-row">
+        <button type="button" id="openDeleteConfirmBtn" class="danger-outline-btn">
+          🗑️ 저장된 오답 기록 비우기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Added Screen 2: Irreversible Action Confirmation Modal -->
+  <div id="deleteConfirmModal" class="modal-backdrop modal-top hidden" role="alertdialog" aria-modal="true" aria-labelledby="deleteConfirmTitle">
+    <div class="modal-sheet confirm-dialog">
+      <div class="confirm-icon" aria-hidden="true">⚠️</div>
+      <h2 id="deleteConfirmTitle" class="confirm-title">저장된 오답 기록을 삭제할까요?</h2>
+      <p id="deleteConfirmDesc" class="confirm-desc"></p>
+      <p class="confirm-warn-box">
+        이 동작은 되돌릴 수 없습니다. 삭제하기 전에 <strong>전체 복사</strong> 또는 <strong>파일(.txt) 저장</strong>을 먼저 완료하셨는지 확인해 주세요.
+      </p>
+      <div class="confirm-btn-row">
+        <button type="button" id="cancelDeleteBtn" class="secondary-btn full-btn">취소 (돌아가기)</button>
+        <button type="button" id="confirmDeleteBtn" class="danger-solid-btn full-btn">영구 삭제 실행</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="data/sea_ice_data.js?v=4"></script>
+  <script src="data/quiz_data.js?v=4"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
